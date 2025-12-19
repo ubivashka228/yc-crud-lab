@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      API_PREFIX: "/api"
+      DATABASE_URL: "postgresql+asyncpg://app:app@db:5432/app"
+      SECRET_KEY: "dev-secret"
+      BOOTSTRAP_ADMIN_TOKEN: "bootstrap-admin-12345"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

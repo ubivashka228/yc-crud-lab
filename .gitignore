@@ -1,0 +1,80 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.cache/
+pip-wheel-metadata/
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+.envrc
+
+# Env files (secrets)
+.env
+.env.*
+!.env.example
+
+# =====================
+# IDE / OS
+# =====================
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =====================
+# Logs
+# =====================
+*.log
+
+# =====================
+# Docker
+# =====================
+**/.docker/
+docker-compose.override.yml
+
+# =====================
+# Terraform
+# =====================
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# =====================
+# Certificates / keys
+# =====================
+*.pem
+*.key
+*.crt
+*.pfx
+
+# =====================
+# Serverless build artifacts
+# =====================
+serverless/**/*.zip
