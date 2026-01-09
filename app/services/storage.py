@@ -1,6 +1,8 @@
 import uuid
+
 import boto3
 from botocore.client import Config
+
 from app.core.config import settings
 
 
@@ -22,7 +24,7 @@ class S3Storage:
         return settings.S3_BUCKET
 
     def build_key(self, filename: str) -> str:
-        return f"uploads/{uuid.uuid4()}/{filename}"
+        return f"attachments/{uuid.uuid4()}/{filename}"
 
     def upload_fileobj(self, fileobj, key: str, content_type: str | None = None) -> None:
         extra = {}

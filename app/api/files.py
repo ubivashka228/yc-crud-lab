@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from app.api.deps import get_current_user
+from fastapi import APIRouter, UploadFile, File, HTTPException
+
 from app.services.storage import S3Storage
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/attachments", tags=["attachments"])
 
 
 @router.post("/upload")
-async def upload(file: UploadFile = File(...), _user=Depends(get_current_user)):
+async def upload(file: UploadFile = File(...)):
     storage = S3Storage()
     if not file.filename:
         raise HTTPException(status_code=400, detail="Filename is required")
@@ -21,6 +21,6 @@ async def upload(file: UploadFile = File(...), _user=Depends(get_current_user)):
 
 
 @router.get("/{key:path}/url")
-async def get_presigned_url(key: str, _user=Depends(get_current_user)):
+async def get_presigned_url(key: str):
     storage = S3Storage()
     return {"url": storage.presign_get_url(key, expires_seconds=600)}

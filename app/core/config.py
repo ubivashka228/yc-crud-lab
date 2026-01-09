@@ -5,14 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True, extra="ignore")
 
-    APP_NAME: str = "crud-backend"
+    APP_NAME: str = "requests-service"
     ENV: str = "local"
     API_PREFIX: str = "/api"
 
     DATABASE_URL: str
-
-    SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
     CORS_ORIGINS: str = ""
 
@@ -22,8 +19,6 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY_ID: str = ""
     S3_SECRET_ACCESS_KEY: str = ""
     S3_PUBLIC_BASE_URL: str = ""
-
-    BOOTSTRAP_ADMIN_TOKEN: str = ""
 
     def cors_origin_list(self) -> List[str]:
         if not self.CORS_ORIGINS.strip():

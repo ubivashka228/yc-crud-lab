@@ -1,3 +1,16 @@
+variable "cloud_id" {
+  type = string
+}
+
+variable "folder_id" {
+  type = string
+}
+
+variable "yc_token" {
+  type      = string
+  sensitive = true
+}
+
 variable "zone" {
   type    = string
   default = "ru-central1-a"
@@ -37,16 +50,6 @@ variable "ssh_public_key_path" {
 variable "repo_url" {
   type    = string
   default = "https://github.com/ubivashka228/yc-crud-lab.git"
-}
-
-variable "secret_key" {
-  type    = string
-  default = "dev-secret"
-}
-
-variable "bootstrap_admin_token" {
-  type    = string
-  default = "bootstrap-admin-12345"
 }
 
 variable "s3_bucket" {

@@ -7,7 +7,7 @@ locals {
 }
 
 resource "yandex_compute_instance" "db" {
-  name = "crud-db"
+  name = "req-db"
 
   resources {
     cores  = 2
@@ -43,7 +43,6 @@ resource "yandex_compute_instance" "db" {
             set -euo pipefail
 
             systemctl enable --now docker
-
             mkdir -p /opt/pgdata
 
             cat > /opt/pg.env <<'ENV'
@@ -66,7 +65,7 @@ resource "yandex_compute_instance" "db" {
 }
 
 resource "yandex_compute_instance" "api1" {
-  name = "crud-api-1"
+  name = "req-api-1"
 
   resources {
     cores  = 2
@@ -108,7 +107,7 @@ resource "yandex_compute_instance" "api1" {
             rm -rf /opt/app || true
             git clone ${var.repo_url} /opt/app
             cd /opt/app
-            docker build -t yc-api:latest .
+            docker build -t requests-api:latest .
 
             # ждём Postgres
             for i in $(seq 1 60); do
@@ -117,22 +116,23 @@ resource "yandex_compute_instance" "api1" {
             done
 
             cat > /opt/app/.env.runtime <<'ENV'
-            PORT=8000
+            PORT=${var.api_port}
             API_PREFIX=/api
             DATABASE_URL=postgresql+asyncpg://app:app@${yandex_compute_instance.db.network_interface[0].ip_address}:5432/app
-            SECRET_KEY=${var.secret_key}
-            BOOTSTRAP_ADMIN_TOKEN=${var.bootstrap_admin_token}
+
             S3_ENDPOINT_URL=https://storage.yandexcloud.net
             S3_REGION=ru-central1
             S3_BUCKET=${var.s3_bucket}
             S3_ACCESS_KEY_ID=${var.s3_access_key_id}
             S3_SECRET_ACCESS_KEY=${var.s3_secret_access_key}
+            S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/${var.s3_bucket}
             ENV
 
-            docker run --rm --env-file /opt/app/.env.runtime yc-api:latest alembic upgrade head
+            # миграции (идемпотентно)
+            docker run --rm --env-file /opt/app/.env.runtime requests-api:latest alembic upgrade head
 
             docker rm -f api || true
-            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p 8000:8000 yc-api:latest
+            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p ${var.api_port}:${var.api_port} requests-api:latest
 
       runcmd:
         - [ bash, -lc, "/usr/local/bin/bootstrap_api1.sh" ]
@@ -143,7 +143,7 @@ resource "yandex_compute_instance" "api1" {
 }
 
 resource "yandex_compute_instance" "api2" {
-  name = "crud-api-2"
+  name = "req-api-2"
 
   resources {
     cores  = 2
@@ -185,28 +185,31 @@ resource "yandex_compute_instance" "api2" {
             rm -rf /opt/app || true
             git clone ${var.repo_url} /opt/app
             cd /opt/app
-            docker build -t yc-api:latest .
+            docker build -t requests-api:latest .
 
+            # ждём Postgres
             for i in $(seq 1 60); do
               nc -z -w 1 ${yandex_compute_instance.db.network_interface[0].ip_address} 5432 && break
               sleep 2
             done
 
             cat > /opt/app/.env.runtime <<'ENV'
-            PORT=8000
+            PORT=${var.api_port}
             API_PREFIX=/api
             DATABASE_URL=postgresql+asyncpg://app:app@${yandex_compute_instance.db.network_interface[0].ip_address}:5432/app
-            SECRET_KEY=${var.secret_key}
-            BOOTSTRAP_ADMIN_TOKEN=${var.bootstrap_admin_token}
+
             S3_ENDPOINT_URL=https://storage.yandexcloud.net
             S3_REGION=ru-central1
             S3_BUCKET=${var.s3_bucket}
             S3_ACCESS_KEY_ID=${var.s3_access_key_id}
             S3_SECRET_ACCESS_KEY=${var.s3_secret_access_key}
+            S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/${var.s3_bucket}
             ENV
 
+            docker run --rm --env-file /opt/app/.env.runtime requests-api:latest alembic upgrade head
+
             docker rm -f api || true
-            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p 8000:8000 yc-api:latest
+            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p ${var.api_port}:${var.api_port} requests-api:latest
 
       runcmd:
         - [ bash, -lc, "/usr/local/bin/bootstrap_api2.sh" ]

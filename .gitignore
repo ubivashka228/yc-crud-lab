@@ -78,3 +78,7 @@ override.tf.json
 # Serverless build artifacts
 # =====================
 serverless/**/*.zip
+
+# YC lab SSH keys
+infra/keys/*
+!infra/keys/*.pubinfra/terraform.tfvars.local

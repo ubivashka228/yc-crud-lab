@@ -1,9 +1,9 @@
 resource "yandex_vpc_network" "net" {
-  name = "crud-net"
+  name = "req-net"
 }
 
 resource "yandex_vpc_subnet" "subnet_a" {
-  name           = "crud-subnet-a"
+  name           = "req-subnet-a"
   zone           = var.zone
   network_id     = yandex_vpc_network.net.id
   v4_cidr_blocks = [var.subnet_cidr]
@@ -11,7 +11,7 @@ resource "yandex_vpc_subnet" "subnet_a" {
 
 # SG для API-инстансов
 resource "yandex_vpc_security_group" "sg_api" {
-  name       = "crud-sg-api"
+  name       = "req-sg-api"
   network_id = yandex_vpc_network.net.id
 
   ingress {
@@ -21,15 +21,13 @@ resource "yandex_vpc_security_group" "sg_api" {
     description    = "SSH"
   }
 
-  # Трафик на API (для NLB / клиентов). Для лабы можно 0.0.0.0/0.
   ingress {
     protocol       = "TCP"
     v4_cidr_blocks = ["0.0.0.0/0"]
     port           = var.api_port
-    description    = "API via NLB (target port)"
+    description    = "API target port"
   }
 
-  # Healthchecks от балансировщика (оставляем)
   ingress {
     protocol          = "TCP"
     port              = var.api_port
@@ -46,10 +44,9 @@ resource "yandex_vpc_security_group" "sg_api" {
 
 # SG для Postgres: доступ только от sg_api
 resource "yandex_vpc_security_group" "sg_db" {
-  name       = "crud-sg-db"
+  name       = "req-sg-db"
   network_id = yandex_vpc_network.net.id
 
-  # SSH на DB (для лабы/дебага)
   ingress {
     protocol       = "TCP"
     v4_cidr_blocks = [var.ssh_cidr]
@@ -57,7 +54,6 @@ resource "yandex_vpc_security_group" "sg_db" {
     description    = "SSH"
   }
 
-  # Postgres только от API SG
   ingress {
     protocol          = "TCP"
     port              = 5432
