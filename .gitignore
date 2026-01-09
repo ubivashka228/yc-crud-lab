@@ -82,3 +82,4 @@ serverless/**/*.zip
 # YC lab SSH keys
 infra/keys/*
 !infra/keys/*.pubinfra/terraform.tfvars.local
+infra/terraform.tfvars.local
