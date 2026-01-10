@@ -104,21 +104,34 @@ resource "yandex_compute_instance" "api1" {
 
             systemctl enable --now docker
 
+            DB_HOST="${yandex_compute_instance.db.network_interface[0].ip_address}"
+            DB_PORT="5432"
+            RUN_MIGRATIONS="1"
+
             rm -rf /opt/app || true
             git clone ${var.repo_url} /opt/app
             cd /opt/app
             docker build -t requests-api:latest .
 
-            # ждём Postgres
-            for i in $(seq 1 60); do
-              nc -z -w 1 ${yandex_compute_instance.db.network_interface[0].ip_address} 5432 && break
+            echo "[BOOT] waiting for postgres at $DB_HOST:$DB_PORT ..."
+            ok=0
+            for i in $(seq 1 90); do
+              if nc -z -w 1 "$DB_HOST" "$DB_PORT"; then
+                ok=1
+                break
+              fi
               sleep 2
             done
+            if [ "$ok" -ne 1 ]; then
+              echo "[BOOT] postgres is not reachable after timeout"
+              exit 1
+            fi
 
-            cat > /opt/app/.env.runtime <<'ENV'
+            cat > /opt/app/.env.runtime <<ENV
             PORT=${var.api_port}
             API_PREFIX=/api
-            DATABASE_URL=postgresql+asyncpg://app:app@${yandex_compute_instance.db.network_interface[0].ip_address}:5432/app
+            DATABASE_URL=postgresql+asyncpg://app:app@$DB_HOST:$DB_PORT/app
+            RUN_MIGRATIONS=$RUN_MIGRATIONS
 
             S3_ENDPOINT_URL=https://storage.yandexcloud.net
             S3_REGION=ru-central1
@@ -128,11 +141,18 @@ resource "yandex_compute_instance" "api1" {
             S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/${var.s3_bucket}
             ENV
 
-            # миграции (идемпотентно)
-            docker run --rm --env-file /opt/app/.env.runtime requests-api:latest alembic upgrade head
+            if [ "$RUN_MIGRATIONS" = "1" ] || [ "$RUN_MIGRATIONS" = "true" ]; then
+              echo "[BOOT] running migrations..."
+              docker run --rm --env-file /opt/app/.env.runtime requests-api:latest alembic upgrade head
+            else
+              echo "[BOOT] migrations skipped"
+            fi
 
             docker rm -f api || true
-            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p ${var.api_port}:${var.api_port} requests-api:latest
+            docker run -d --restart always --name api \
+              --env-file /opt/app/.env.runtime \
+              -p ${var.api_port}:${var.api_port} \
+              requests-api:latest
 
       runcmd:
         - [ bash, -lc, "/usr/local/bin/bootstrap_api1.sh" ]
@@ -182,21 +202,34 @@ resource "yandex_compute_instance" "api2" {
 
             systemctl enable --now docker
 
+            DB_HOST="${yandex_compute_instance.db.network_interface[0].ip_address}"
+            DB_PORT="5432"
+            RUN_MIGRATIONS="0"
+
             rm -rf /opt/app || true
             git clone ${var.repo_url} /opt/app
             cd /opt/app
             docker build -t requests-api:latest .
 
-            # ждём Postgres
-            for i in $(seq 1 60); do
-              nc -z -w 1 ${yandex_compute_instance.db.network_interface[0].ip_address} 5432 && break
+            echo "[BOOT] waiting for postgres at $DB_HOST:$DB_PORT ..."
+            ok=0
+            for i in $(seq 1 90); do
+              if nc -z -w 1 "$DB_HOST" "$DB_PORT"; then
+                ok=1
+                break
+              fi
               sleep 2
             done
+            if [ "$ok" -ne 1 ]; then
+              echo "[BOOT] postgres is not reachable after timeout"
+              exit 1
+            fi
 
-            cat > /opt/app/.env.runtime <<'ENV'
+            cat > /opt/app/.env.runtime <<ENV
             PORT=${var.api_port}
             API_PREFIX=/api
-            DATABASE_URL=postgresql+asyncpg://app:app@${yandex_compute_instance.db.network_interface[0].ip_address}:5432/app
+            DATABASE_URL=postgresql+asyncpg://app:app@$DB_HOST:$DB_PORT/app
+            RUN_MIGRATIONS=$RUN_MIGRATIONS
 
             S3_ENDPOINT_URL=https://storage.yandexcloud.net
             S3_REGION=ru-central1
@@ -206,10 +239,13 @@ resource "yandex_compute_instance" "api2" {
             S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/${var.s3_bucket}
             ENV
 
-            docker run --rm --env-file /opt/app/.env.runtime requests-api:latest alembic upgrade head
+            echo "[BOOT] migrations skipped on api2"
 
             docker rm -f api || true
-            docker run -d --restart always --name api --env-file /opt/app/.env.runtime -p ${var.api_port}:${var.api_port} requests-api:latest
+            docker run -d --restart always --name api \
+              --env-file /opt/app/.env.runtime \
+              -p ${var.api_port}:${var.api_port} \
+              requests-api:latest
 
       runcmd:
         - [ bash, -lc, "/usr/local/bin/bootstrap_api2.sh" ]

@@ -83,3 +83,4 @@ serverless/**/*.zip
 infra/keys/*
 !infra/keys/*.pubinfra/terraform.tfvars.local
 infra/terraform.tfvars.local
+infra/terraform.tfvars.local
